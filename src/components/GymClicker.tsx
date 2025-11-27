@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
 
@@ -13,6 +15,27 @@ interface Upgrade {
   level: number;
   icon: string;
   effect: number;
+}
+
+interface Equipment {
+  id: string;
+  name: string;
+  description: string;
+  cost: number;
+  owned: boolean;
+  icon: string;
+  bonus: number;
+  type: 'click' | 'auto' | 'exp';
+}
+
+interface Achievement {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  unlocked: boolean;
+  reward: number;
+  condition: (stats: any) => boolean;
 }
 
 export default function GymClicker() {
@@ -91,6 +114,122 @@ export default function GymClicker() {
     ];
   });
 
+  const [equipment, setEquipment] = useState<Equipment[]>(() => {
+    const saved = localStorage.getItem('gymClickerEquipment');
+    return saved ? JSON.parse(saved) : [
+      {
+        id: 'gloves',
+        name: 'Перчатки',
+        description: '+5 к силе клика',
+        cost: 300,
+        owned: false,
+        icon: 'Hand',
+        bonus: 5,
+        type: 'click',
+      },
+      {
+        id: 'shoes',
+        name: 'Кроссовки',
+        description: '+2 автоклик/сек',
+        cost: 500,
+        owned: false,
+        icon: 'Footprints',
+        bonus: 2,
+        type: 'auto',
+      },
+      {
+        id: 'belt',
+        name: 'Пояс чемпиона',
+        description: '+50% опыта',
+        cost: 800,
+        owned: false,
+        icon: 'Award',
+        bonus: 50,
+        type: 'exp',
+      },
+      {
+        id: 'headband',
+        name: 'Повязка',
+        description: '+3 к силе клика',
+        cost: 400,
+        owned: false,
+        icon: 'Brain',
+        bonus: 3,
+        type: 'click',
+      },
+      {
+        id: 'smartwatch',
+        name: 'Смарт-часы',
+        description: '+5 автоклик/сек',
+        cost: 1200,
+        owned: false,
+        icon: 'Watch',
+        bonus: 5,
+        type: 'auto',
+      },
+    ];
+  });
+
+  const [achievements, setAchievements] = useState<Achievement[]>(() => {
+    const saved = localStorage.getItem('gymClickerAchievements');
+    return saved ? JSON.parse(saved) : [
+      {
+        id: 'first_click',
+        name: 'Первый шаг',
+        description: 'Сделай первый клик',
+        icon: 'MousePointerClick',
+        unlocked: false,
+        reward: 10,
+        condition: (stats: any) => stats.totalClicks >= 1,
+      },
+      {
+        id: 'hundred_clicks',
+        name: 'Сотка',
+        description: 'Сделай 100 кликов',
+        icon: 'Target',
+        unlocked: false,
+        reward: 50,
+        condition: (stats: any) => stats.totalClicks >= 100,
+      },
+      {
+        id: 'level_5',
+        name: 'Новичок',
+        description: 'Достигни 5 уровня',
+        icon: 'Star',
+        unlocked: false,
+        reward: 100,
+        condition: (stats: any) => stats.level >= 5,
+      },
+      {
+        id: 'level_10',
+        name: 'Атлет',
+        description: 'Достигни 10 уровня',
+        icon: 'Trophy',
+        unlocked: false,
+        reward: 300,
+        condition: (stats: any) => stats.level >= 10,
+      },
+      {
+        id: 'rich',
+        name: 'Богач',
+        description: 'Накопи 1000 монет',
+        icon: 'Coins',
+        unlocked: false,
+        reward: 200,
+        condition: (stats: any) => stats.coins >= 1000,
+      },
+      {
+        id: 'shopper',
+        name: 'Шопоголик',
+        description: 'Купи 3 экипировки',
+        icon: 'ShoppingBag',
+        unlocked: false,
+        reward: 500,
+        condition: (stats: any) => stats.equipmentOwned >= 3,
+      },
+    ];
+  });
+
   const expToNextLevel = level * 100;
 
   useEffect(() => {
@@ -101,7 +240,9 @@ export default function GymClicker() {
     localStorage.setItem('gymClickerAutoClick', autoClickRate.toString());
     localStorage.setItem('gymClickerTotalClicks', totalClicks.toString());
     localStorage.setItem('gymClickerUpgrades', JSON.stringify(upgrades));
-  }, [coins, level, experience, clickPower, autoClickRate, totalClicks, upgrades]);
+    localStorage.setItem('gymClickerEquipment', JSON.stringify(equipment));
+    localStorage.setItem('gymClickerAchievements', JSON.stringify(achievements));
+  }, [coins, level, experience, clickPower, autoClickRate, totalClicks, upgrades, equipment, achievements]);
 
   useEffect(() => {
     if (autoClickRate > 0) {
@@ -123,9 +264,37 @@ export default function GymClicker() {
     }
   }, [experience, expToNextLevel, level]);
 
+  useEffect(() => {
+    const stats = {
+      totalClicks,
+      level,
+      coins,
+      equipmentOwned: equipment.filter((e) => e.owned).length,
+    };
+
+    achievements.forEach((achievement) => {
+      if (!achievement.unlocked && achievement.condition(stats)) {
+        setAchievements((prev) =>
+          prev.map((a) =>
+            a.id === achievement.id ? { ...a, unlocked: true } : a
+          )
+        );
+        setCoins((prev) => prev + achievement.reward);
+        toast({
+          title: '🏆 Достижение разблокировано!',
+          description: `${achievement.name} - Награда: ${achievement.reward} монет`,
+        });
+      }
+    });
+  }, [totalClicks, level, coins, equipment]);
+
   const handleClick = () => {
     const multiplier = upgrades.find((u) => u.id === 'multiplier')?.level || 0;
-    const expGain = clickPower * (1 + multiplier * 0.5);
+    const equipmentBonus = equipment
+      .filter((e) => e.owned && e.type === 'exp')
+      .reduce((sum, e) => sum + e.bonus, 0);
+    const expMultiplier = 1 + multiplier * 0.5 + equipmentBonus / 100;
+    const expGain = clickPower * expMultiplier;
     
     setCoins((prev) => prev + clickPower);
     setExperience((prev) => prev + expGain);
@@ -173,6 +342,38 @@ export default function GymClicker() {
     });
   };
 
+  const handleBuyEquipment = (equipmentId: string) => {
+    const item = equipment.find((e) => e.id === equipmentId);
+    if (!item || item.owned || coins < item.cost) {
+      toast({
+        title: '❌ Недостаточно монет',
+        description: `Нужно ${item?.cost} монет`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setCoins((prev) => prev - item.cost);
+    setEquipment((prev) =>
+      prev.map((e) => {
+        if (e.id === equipmentId) {
+          if (e.type === 'click') {
+            setClickPower((p) => p + e.bonus);
+          } else if (e.type === 'auto') {
+            setAutoClickRate((r) => r + e.bonus);
+          }
+          return { ...e, owned: true };
+        }
+        return e;
+      })
+    );
+
+    toast({
+      title: '✅ Экипировка куплена!',
+      description: item.name,
+    });
+  };
+
   const getMuscleSize = () => {
     const baseSize = 60;
     const growth = Math.min(level * 5, 100);
@@ -186,6 +387,8 @@ export default function GymClicker() {
     return 'from-red-400 to-red-500';
   };
 
+  const unlockedAchievements = achievements.filter((a) => a.unlocked).length;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 p-4">
       <div className="max-w-6xl mx-auto">
@@ -198,7 +401,7 @@ export default function GymClicker() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-4">
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-4 gap-4">
               <Card className="p-4 bg-slate-800/50 backdrop-blur border-slate-700">
                 <div className="flex items-center gap-2 mb-1">
                   <Icon name="Coins" className="text-yellow-400" size={20} />
@@ -221,6 +424,14 @@ export default function GymClicker() {
                   <span className="text-sm text-slate-400">Сила</span>
                 </div>
                 <div className="text-2xl font-bold text-white">{clickPower}</div>
+              </Card>
+
+              <Card className="p-4 bg-slate-800/50 backdrop-blur border-slate-700">
+                <div className="flex items-center gap-2 mb-1">
+                  <Icon name="Award" className="text-purple-400" size={20} />
+                  <span className="text-sm text-slate-400">Награды</span>
+                </div>
+                <div className="text-2xl font-bold text-white">{unlockedAchievements}/{achievements.length}</div>
               </Card>
             </div>
 
@@ -282,66 +493,117 @@ export default function GymClicker() {
 
           <div className="space-y-4">
             <Card className="p-4 bg-slate-800/50 backdrop-blur border-slate-700">
-              <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                <Icon name="ShoppingCart" className="text-purple-400" />
-                Улучшения
-              </h2>
-              <div className="space-y-3">
-                {upgrades.map((upgrade) => (
-                  <Card key={upgrade.id} className="p-4 bg-slate-900/50 border-slate-700">
-                    <div className="flex items-start gap-3 mb-3">
-                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
-                        <Icon name={upgrade.icon as any} className="text-white" size={20} />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-semibold text-white">{upgrade.name}</h3>
-                          {upgrade.level > 0 && (
-                            <span className="text-xs px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded-full">
-                              Ур. {upgrade.level}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs text-slate-400">{upgrade.description}</p>
-                      </div>
-                    </div>
-                    <Button
-                      onClick={() => handleUpgrade(upgrade.id)}
-                      disabled={coins < upgrade.cost}
-                      className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:opacity-50"
-                      size="sm"
-                    >
-                      <Icon name="Coins" className="mr-2" size={16} />
-                      {upgrade.cost.toLocaleString()}
-                    </Button>
-                  </Card>
-                ))}
-              </div>
-            </Card>
+              <Tabs defaultValue="upgrades" className="w-full">
+                <TabsList className="grid w-full grid-cols-3 mb-4">
+                  <TabsTrigger value="upgrades">Улучшения</TabsTrigger>
+                  <TabsTrigger value="equipment">Экипировка</TabsTrigger>
+                  <TabsTrigger value="achievements">Награды</TabsTrigger>
+                </TabsList>
 
-            <Card className="p-4 bg-slate-800/50 backdrop-blur border-slate-700">
-              <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                <Icon name="BarChart3" className="text-orange-400" />
-                Статистика
-              </h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Всего кликов:</span>
-                  <span className="text-white font-semibold">{totalClicks.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Монет заработано:</span>
-                  <span className="text-white font-semibold">{coins.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Сила клика:</span>
-                  <span className="text-white font-semibold">{clickPower}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Автоклик/сек:</span>
-                  <span className="text-white font-semibold">{autoClickRate}</span>
-                </div>
-              </div>
+                <TabsContent value="upgrades" className="space-y-3">
+                  {upgrades.map((upgrade) => (
+                    <Card key={upgrade.id} className="p-4 bg-slate-900/50 border-slate-700">
+                      <div className="flex items-start gap-3 mb-3">
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center shrink-0">
+                          <Icon name={upgrade.icon as any} className="text-white" size={20} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="font-semibold text-white truncate">{upgrade.name}</h3>
+                            {upgrade.level > 0 && (
+                              <Badge variant="secondary" className="text-xs shrink-0">
+                                Ур. {upgrade.level}
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-slate-400">{upgrade.description}</p>
+                        </div>
+                      </div>
+                      <Button
+                        onClick={() => handleUpgrade(upgrade.id)}
+                        disabled={coins < upgrade.cost}
+                        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:opacity-50"
+                        size="sm"
+                      >
+                        <Icon name="Coins" className="mr-2" size={16} />
+                        {upgrade.cost.toLocaleString()}
+                      </Button>
+                    </Card>
+                  ))}
+                </TabsContent>
+
+                <TabsContent value="equipment" className="space-y-3">
+                  {equipment.map((item) => (
+                    <Card key={item.id} className={`p-4 border-slate-700 ${item.owned ? 'bg-green-900/20' : 'bg-slate-900/50'}`}>
+                      <div className="flex items-start gap-3 mb-3">
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
+                          item.owned ? 'bg-gradient-to-br from-green-500 to-emerald-500' : 'bg-gradient-to-br from-orange-500 to-red-500'
+                        }`}>
+                          <Icon name={item.icon as any} className="text-white" size={20} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="font-semibold text-white truncate">{item.name}</h3>
+                            {item.owned && (
+                              <Badge className="bg-green-500 text-xs shrink-0">Куплено</Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-slate-400">{item.description}</p>
+                        </div>
+                      </div>
+                      <Button
+                        onClick={() => handleBuyEquipment(item.id)}
+                        disabled={item.owned || coins < item.cost}
+                        className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 disabled:opacity-50"
+                        size="sm"
+                      >
+                        {item.owned ? (
+                          <>
+                            <Icon name="Check" className="mr-2" size={16} />
+                            Куплено
+                          </>
+                        ) : (
+                          <>
+                            <Icon name="Coins" className="mr-2" size={16} />
+                            {item.cost.toLocaleString()}
+                          </>
+                        )}
+                      </Button>
+                    </Card>
+                  ))}
+                </TabsContent>
+
+                <TabsContent value="achievements" className="space-y-3">
+                  {achievements.map((achievement) => (
+                    <Card key={achievement.id} className={`p-4 border-slate-700 ${
+                      achievement.unlocked ? 'bg-gradient-to-r from-purple-900/30 to-blue-900/30' : 'bg-slate-900/50 opacity-60'
+                    }`}>
+                      <div className="flex items-start gap-3">
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
+                          achievement.unlocked ? 'bg-gradient-to-br from-yellow-500 to-orange-500' : 'bg-slate-700'
+                        }`}>
+                          <Icon name={achievement.icon as any} className="text-white" size={20} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className={`font-semibold truncate ${achievement.unlocked ? 'text-white' : 'text-slate-400'}`}>
+                              {achievement.name}
+                            </h3>
+                            {achievement.unlocked && (
+                              <Icon name="Check" className="text-green-400 shrink-0" size={16} />
+                            )}
+                          </div>
+                          <p className="text-xs text-slate-400 mb-2">{achievement.description}</p>
+                          <div className="flex items-center gap-1 text-xs">
+                            <Icon name="Gift" className="text-yellow-400" size={14} />
+                            <span className="text-yellow-400 font-semibold">+{achievement.reward} монет</span>
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </TabsContent>
+              </Tabs>
             </Card>
           </div>
         </div>
