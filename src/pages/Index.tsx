@@ -1,14 +1,29 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState } from 'react';
+import Home from './Home';
+import Game from './Game';
+import Profile from './Profile';
+import Leaderboard from './Leaderboard';
+import Achievements from './Achievements';
 
-const Index = () => {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4 color-black text-black">Добро пожаловать!</h1>
-        <p className="text-xl text-gray-600">тут будет отображаться ваш проект</p>
-      </div>
-    </div>
-  );
-};
+export default function Index() {
+  const [currentPage, setCurrentPage] = useState('home');
 
-export default Index;
+  const renderPage = () => {
+    switch (currentPage) {
+      case 'home':
+        return <Home onNavigate={setCurrentPage} />;
+      case 'game':
+        return <Game onNavigate={setCurrentPage} />;
+      case 'profile':
+        return <Profile onNavigate={setCurrentPage} />;
+      case 'leaderboard':
+        return <Leaderboard onNavigate={setCurrentPage} />;
+      case 'achievements':
+        return <Achievements onNavigate={setCurrentPage} />;
+      default:
+        return <Home onNavigate={setCurrentPage} />;
+    }
+  };
+
+  return <div className="min-h-screen">{renderPage()}</div>;
+}
