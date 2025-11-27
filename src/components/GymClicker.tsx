@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import Icon from '@/components/ui/icon';
 import { useToast } from '@/hooks/use-toast';
+import RealisticCharacter from './RealisticCharacter';
 
 interface Upgrade {
   id: string;
@@ -447,37 +448,12 @@ export default function GymClicker() {
 
             <Card className="p-8 bg-gradient-to-br from-slate-800/80 to-slate-900/80 backdrop-blur border-slate-700">
               <div className="flex flex-col items-center justify-center">
-                <button
-                  onClick={handleClick}
-                  className={`transition-all duration-200 cursor-pointer hover:scale-105 ${
-                    clickAnimation ? 'scale-110' : 'scale-100'
-                  }`}
-                >
-                  <div className="relative">
-                    <div
-                      className={`w-32 h-40 bg-gradient-to-b ${getBodyColor()} rounded-t-full relative transition-all duration-300`}
-                      style={{ width: `${getMuscleSize()}px` }}
-                    >
-                      <div className="absolute top-2 left-1/4 w-3 h-3 bg-white rounded-full" />
-                      <div className="absolute top-2 right-1/4 w-3 h-3 bg-white rounded-full" />
-                      <div className="absolute top-8 left-1/2 -translate-x-1/2 w-8 h-2 bg-white/20 rounded-full" />
-                      
-                      <div className="absolute -left-8 top-12 w-12 h-16 bg-gradient-to-b from-blue-400 to-blue-500 rounded-full" />
-                      <div className="absolute -right-8 top-12 w-12 h-16 bg-gradient-to-b from-blue-400 to-blue-500 rounded-full" />
-                    </div>
-                    
-                    <div className="w-24 h-32 bg-gradient-to-b from-blue-500 to-blue-600 rounded-b-lg mx-auto">
-                      <div className="absolute -left-6 top-32 w-10 h-20 bg-gradient-to-b from-blue-500 to-blue-600 rounded-lg" />
-                      <div className="absolute -right-6 top-32 w-10 h-20 bg-gradient-to-b from-blue-500 to-blue-600 rounded-lg" />
-                    </div>
-
-                    {clickAnimation && (
-                      <div className="absolute -top-8 left-1/2 -translate-x-1/2 text-2xl font-bold text-yellow-400 animate-float">
-                        +{clickPower}
-                      </div>
-                    )}
+                <RealisticCharacter level={level} clickAnimation={clickAnimation} onClick={handleClick} />
+                {clickAnimation && (
+                  <div className="absolute top-24 text-3xl font-bold text-yellow-400 animate-float">
+                    +{clickPower}
                   </div>
-                </button>
+                )}
                 <div className="mt-6 text-center">
                   <p className="text-slate-400 text-sm mb-2">Кликни на персонажа!</p>
                   <p className="text-slate-500 text-xs">Всего кликов: {totalClicks.toLocaleString()}</p>
