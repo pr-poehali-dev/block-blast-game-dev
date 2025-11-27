@@ -1,5 +1,5 @@
-import JungleRunner from '@/components/JungleRunner';
+import GymClicker from '@/components/GymClicker';
 
 export default function Index() {
-  return <JungleRunner />;
+  return <GymClicker />;
 }
